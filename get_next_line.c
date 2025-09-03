@@ -1,0 +1,110 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: yudedele <yudedele@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/08/25 17:53:05 by yudedele          #+#    #+#             */
+/*   Updated: 2025/09/04 02:50:53 by yudedele         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "get_next_line.h"
+#include <unistd.h>
+
+static char	*gn_get_before_line(char *s1)
+{
+	char	*line;
+	int		i;
+
+	i = 0;
+	if (!s1 || s1[0] == '\0')
+		return (NULL);
+	while (s1[i] && s1[i] != '\n')
+		i++;
+	if (s1[i] == '\n')
+		i++;
+	line = malloc(i + 1);
+	if (!line)
+		return (NULL);
+	i = 0;
+	while (s1[i] && s1[i] != '\n')
+	{
+		line[i] = s1[i];
+		i++;
+	}
+	if (s1[i] == '\n')
+		line[i++] = '\n';
+	line[i] = '\0';
+	return (line);
+}
+
+static char	*gn_get_after_remaining(char *s1)
+{
+	char	*remaining;
+	int		i;
+	int		j;
+
+	i = 0;
+	j = 0;
+	while (s1[i] && s1[i] != '\n')
+		i++;
+	if (!s1[i])
+	{
+		free(s1);
+		return (NULL);
+	}
+	i++;
+	remaining = malloc(gn_strlen(s1) - i + 1);
+	if (!remaining)
+	{
+		free(s1);
+		return (NULL);
+	}
+	while (s1[i])
+		remaining[j++] = s1[i++];
+	remaining[j] = '\0';
+	free(s1);
+	return (remaining);
+}
+
+static char	*read_and_join(int fd, char *s1)
+{
+	char	*tmp;
+	ssize_t	a;
+
+	a = 1;
+	while (!gn_strchr(s1, '\n') && a != 0)
+	{
+		tmp = malloc(BUFFER_SIZE + 1);
+		if (!tmp)
+			return (NULL);
+		a = read(fd, tmp, BUFFER_SIZE);
+		if (a == -1)
+		{
+			free(tmp);
+			free(s1);
+			return (NULL);
+		}
+		tmp[a] = '\0';
+		s1 = gn_strjoin(s1, tmp);
+		free(tmp);
+	}
+	return (s1);
+}
+
+char	*get_next_line(int fd)
+{
+	static char	*s1 = NULL;
+	char		*line;
+
+	if (fd < 0 || BUFFER_SIZE <= 0)
+		return (NULL);
+	s1 = read_and_join(fd, s1);
+	if (!s1)
+		return (NULL);
+	line = gn_get_before_line(s1);
+	s1 = gn_get_after_remaining(s1);
+	return (line);
+}
